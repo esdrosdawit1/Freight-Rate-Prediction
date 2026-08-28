@@ -2,73 +2,78 @@
 
 ## Project Overview
 
-This project develops a machine learning solution for predicting freight rates from shipment and market characteristics.
+This project develops a machine learning solution for predicting freight rates from shipment, route, equipment, distance, weight, market, and temporal information.
 
-The goal is to accurately estimate freight rates for new loads using information such as origin, destination, distance, equipment type, weight, date, and available market signals.
+The goal was to build a robust regression pipeline that could generalize from historical freight data to future shipment dates, including a required set of December predictions.
 
-The project follows an end-to-end machine learning workflow, including exploratory data analysis, feature engineering, model development, hyperparameter tuning, model comparison, validation, model blending, and final prediction generation.
+The project follows an end-to-end machine learning workflow:
 
----
-
-## Business Problem
-
-Freight pricing depends on multiple factors, including:
-
-- Pickup and delivery locations
-- Shipment distance
-- Equipment type
-- Load weight
-- Date and seasonality
-- Market conditions
-- Quote-related signals
-
-Accurately predicting freight rates can support more consistent pricing decisions, improve cost estimation, and provide data-driven insight into freight markets.
-
-This project treats freight-rate prediction as a supervised regression problem, using **Root Mean Squared Error (RMSE)** as the primary evaluation metric.
+**Data Exploration → Feature Engineering → Model Development → Time-Based Validation → Hyperparameter Tuning → Model Blending → Full-Data Retraining → Final Predictions**
 
 ---
 
 ## Dataset
 
-The assessment provided several datasets for different stages of the modeling process:
+The project uses three primary datasets:
 
-- `train-test.csv` — labeled development data used for model training and evaluation.
-- `validation.csv` — validation loads requiring predicted freight rates.
-- `december-chart-inputs.csv` — December chart inputs used for the final prediction task.
-- `validation-predictions-template.csv` — template defining the required validation prediction format.
+- `train-test.csv` — labeled development data used for model training and time-based validation.
+- `validation.csv` — unlabeled shipment records requiring freight-rate predictions.
+- `december-chart-inputs.csv` — December shipment inputs requiring daily freight-rate predictions.
 
-The target variable is the observed freight rate, `posted_rate`.
+A validation prediction template was also provided:
+
+- `validation-predictions-template.csv`
+
+The December dataset contains **31 daily shipment records**, representing December 1 through December 31, 2025.
+
+---
+
+## Problem Definition
+
+This is a **supervised regression problem**.
+
+The target variable is the historical freight rate, represented by the `posted_rate` column.
+
+The model learns relationships between freight rates and variables such as:
+
+- Pickup location
+- Delivery location
+- Distance
+- Equipment type
+- Weight
+- Date
+- Market information
+- Quote-related signals
+
+The objective is to minimize **Root Mean Squared Error (RMSE)**.
 
 ---
 
 ## Exploratory Data Analysis
 
-The data was analyzed to understand the characteristics of the freight-rate problem and identify useful patterns for modeling.
+The initial analysis focused on understanding:
 
-The analysis included:
-
+- Dataset dimensions
+- Feature types
+- Missing values
 - Target distribution
 - Numerical feature distributions
-- Missing-value analysis
 - Categorical variables
-- Relationships between freight rate and shipment characteristics
-- Route-level patterns
-- Distance and weight relationships
+- Relationships between shipment characteristics and freight rates
 - Temporal patterns
-- Market-related signals
-- Quote-related signals
+- Route-level characteristics
 
-The findings from the exploratory analysis were used to guide the feature-engineering and modeling stages.
+Particular attention was given to variables that could influence freight pricing, including distance, weight, route, equipment type, and market conditions.
 
 ---
 
 ## Feature Engineering
 
-Feature engineering was used to help the models capture nonlinear relationships, temporal patterns, route-specific behavior, and interactions between shipment characteristics.
+A feature-engineering pipeline was developed to capture nonlinear relationships and interactions within the freight data.
 
 ### Date Features
 
-The original date variable was transformed into:
+The date variable was transformed into:
 
 - Year
 - Month
@@ -79,33 +84,35 @@ The original date variable was transformed into:
 - Cyclical month features
 - Cyclical day-of-week features
 
+Cyclical transformations allow the model to represent recurring calendar patterns.
+
 ### Distance Features
 
-Additional distance-based features included:
+Additional distance features included:
 
-- Squared distance
-- Cubed distance
+- Distance squared
+- Distance cubed
 - Log-transformed distance
 - Square-root distance
 
 ### Weight Features
 
-Additional weight-based features included:
+Additional weight features included:
 
-- Squared weight
+- Weight squared
 - Log-transformed weight
 - Absolute weight
 
-### Distance and Weight Relationships
+### Distance-Weight Relationships
 
-The following interaction features were created:
+Interaction features were created to capture relationships between shipment size and travel distance:
 
 - Distance per weight
 - Distance × weight
 
 ### Geographic Features
 
-Where geographic coordinates were available, additional features were created from:
+Where latitude and longitude information was available, the pipeline created:
 
 - Latitude difference
 - Absolute latitude difference
@@ -114,60 +121,61 @@ Where geographic coordinates were available, additional features were created fr
 
 ### Route Features
 
-Route-level categorical features included:
+Pickup and delivery locations were combined to create:
 
-- Pickup location
-- Delivery location
-- Pickup → delivery route
+- Route
+- Route pair
+
+### Equipment Interactions
+
+Interactions between locations and equipment were created:
+
 - Pickup × equipment
 - Delivery × equipment
 - Route × equipment
+
+### Route and Time Interactions
+
+Additional categorical interactions included:
+
 - Route × month
 - Equipment × month
 
-### Market and Quote Features
+### Market Interactions
 
-Additional interaction features were created using available market and quote signals:
+Where available, market and quote-related variables were combined with:
 
-- Market index × distance
-- Market index × quote signal
-- Quote signal × distance
+- Distance
+- Quote signal
+- Market index
+
+These features were designed to help the model capture nonlinear pricing behavior.
 
 ---
-
-## Data Preprocessing
-
-The preprocessing pipeline was designed to keep the development, validation, and December datasets consistent.
-
-Categorical variables were converted to string values and missing categories were assigned a dedicated `__MISSING__` value.
-
-Numeric missing values were replaced using medians calculated **only from the labeled development data**.
-
-Infinite values were also replaced with missing values before imputation.
-
-The final model feature set was restricted to features available across:
-
-1. The labeled development data
-2. The validation data
-3. The December chart inputs
-
-This prevents the final December predictions from depending on variables that are unavailable at prediction time.
 
 ## Model Development
 
-Multiple machine learning models and hyperparameter configurations were evaluated during development.
+Several regression models and hyperparameter configurations were evaluated during model development.
 
-The primary modeling approach focused on gradient-boosted decision trees, with CatBoost selected as the strongest modeling framework.
+The final modeling approach used **CatBoostRegressor**, which was particularly well suited to the dataset because it can directly handle categorical variables while also modeling nonlinear relationships.
 
-CatBoost was particularly useful for this problem because it can directly handle categorical variables while modeling nonlinear relationships and interactions between features.
-
-Model configurations were evaluated using an October holdout dataset, with RMSE used as the primary metric.
+Categorical variables were handled natively by CatBoost rather than requiring one-hot encoding.
 
 ---
 
-## Final Model
+## Time-Based Holdout Validation
 
-The strongest development approach was a **50/50 blend of two tuned CatBoost regression models**.
+Instead of relying on a random train/validation split, the project used an **October holdout** to evaluate how well models could generalize to a later time period.
+
+This approach was chosen because freight pricing is time-dependent and a future-period holdout provides a more realistic assessment of model performance.
+
+Models were compared using **RMSE**, with lower values indicating better performance.
+
+---
+
+## Model Selection
+
+After comparing multiple models and hyperparameter configurations, two CatBoost configurations produced the strongest development performance.
 
 ### CatBoost Tuned 1
 
@@ -187,24 +195,32 @@ The strongest development approach was a **50/50 blend of two tuned CatBoost reg
 - Bagging temperature: `1`
 - Iterations: `547`
 
-The final prediction is calculated using equal weighting:
+---
 
-Final Prediction =
-0.50 × CatBoost Tuned 1
-+
-0.50 × CatBoost Tuned 3
+## Model Blending
+
+Rather than selecting only one of the two strongest models, their predictions were combined using a simple **50/50 ensemble**.
+
+The final prediction was calculated as:
+
+**Final Prediction = 0.50 × CatBoost Tuned 1 + 0.50 × CatBoost Tuned 3**
+
+This combines two models with different tree depths and regularization settings, allowing the final prediction to benefit from both model configurations.
+
+---
 
 ## Model Performance
 
-The final 50/50 CatBoost blend achieved an October holdout:
+The final 50/50 CatBoost blend achieved an October holdout **RMSE of $646.51**, improving on the original CatBoost baseline of **$647.10**.
 
-**RMSE: $646.51**
+| Model | October Holdout RMSE |
+|---|---:|
+| Original CatBoost Baseline | $647.10 |
+| 50/50 Tuned CatBoost Blend | **$646.51** |
 
-This improved upon the original CatBoost baseline:
+The final ensemble improved the October holdout RMSE by **$0.59** compared with the original baseline.
 
-**Baseline RMSE: $647.10**
-
-The blended approach therefore provided a measurable improvement over the original baseline model.
+---
 
 ## Final Retraining
 
@@ -235,34 +251,98 @@ The final pipeline generates two prediction files.
 
 ### `validation_predictions.csv`
 
-This file contains:
+This file contains `load_id, predicted_rate` pairs. It provides predictions for all 12,000 validation loads and follows the format specified by the provided validation template.
 
-load_id,predicted_rate
+### `december_chart_inputs.csv`
 
-It provides predictions for all 12,000 validation loads and follows the format specified by the provided validation template.
+This file preserves the original December chart inputs and adds a `predicted_rate` column. Predictions are generated for all 31 December dates.
 
-december_chart_inputs.csv
-
-This file preserves the original December chart inputs and adds:
-
-predicted_rate
-
-Predictions are generated for all 31 December dates.
+---
 
 ## Output Validation
 
-Before saving the final files, the pipeline performs several checks to reduce the risk of submission errors.
-
-These include:
+Before saving the final files, the pipeline performs several checks to reduce the risk of submission errors. These include:
 
 - Validation prediction count matches the validation dataset
 - December prediction count matches the December dataset
 - Predictions contain only finite numeric values
 - Predictions are positive
-- Validation load_id ordering matches the provided template
+- Validation `load_id` ordering matches the provided template
 - Validation output columns match the required format
 - December output columns match the required format
 - December contains exactly 31 rows
 - December contains dates from December 1 through December 31, 2025
 - December shipment characteristics match the required inputs
 - No missing predicted rates are present
+
+---
+
+## Project Structure
+
+```
+freight-rate-prediction/
+│
+├── README.md
+│
+├── notebooks/
+│   └── freight_rate_prediction.ipynb
+│
+├── outputs/
+│   ├── validation_predictions.csv
+│   └── december_chart_inputs.csv
+│
+└── requirements.txt
+
+---
+
+## Technologies Used
+
+- Python
+- Pandas
+- NumPy
+- CatBoost
+- Matplotlib
+- Jupyter Notebook
+- Kaggle
+
+---
+
+## Key Skills Demonstrated
+
+- Exploratory Data Analysis
+- Data Cleaning
+- Missing-Value Handling
+- Feature Engineering
+- Categorical Feature Engineering
+- Time-Based Feature Engineering
+- Nonlinear Feature Transformations
+- Interaction Features
+- Regression Modeling (CatBoost)
+- Hyperparameter Tuning
+- Model Comparison
+- Model Blending
+- Time-Based Holdout Validation
+- Final Model Retraining
+- Prediction Pipeline Development
+- Output Validation
+
+---
+
+## Key Result
+
+| Model | October Holdout RMSE |
+|---|---:|
+| Original CatBoost Baseline | $647.10 |
+| 50/50 Tuned CatBoost Blend | **$646.51** |
+
+The final ensemble improved the October holdout RMSE by **$0.59** compared with the original baseline.
+
+---
+
+## Conclusion
+
+This project demonstrates an end-to-end machine learning workflow for freight-rate prediction, from exploratory analysis and feature engineering through model selection, time-based validation, ensemble blending, and final prediction generation.
+
+The final solution uses a 50/50 blend of two tuned CatBoost regression models, achieving an October holdout RMSE of $646.51. The winning models were subsequently retrained on the full labeled development dataset and used to generate the required validation and December freight-rate predictions.
+
+The project demonstrates practical machine learning skills including feature engineering, categorical modeling, hyperparameter tuning, time-based validation, ensemble modeling, and production-oriented prediction validation.
