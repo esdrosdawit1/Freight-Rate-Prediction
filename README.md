@@ -12,6 +12,134 @@ The project follows an end-to-end machine learning workflow:
 
 ---
 
+## How to Run
+
+### 1. Set Up the Project Folder
+
+Clone or download the repository and open the repository/project root folder in VS Code.
+
+The repository contains the modeling code and supporting scripts. The assessment input data should be placed in the `data/` folder separately.
+
+The project should be organized as follows before running the notebook:
+
+<project-root>/
+│
+├── data/
+│   ├── train-test.csv
+│   ├── validation.csv
+│   ├── december-chart-inputs.csv
+│   └── validation-predictions-template.csv
+│
+├── outputs/
+│   └── (empty or created automatically by the notebook)
+│
+├── freight-rate-prediction.ipynb
+├── score.py
+├── requirements.txt
+└── README.md
+
+**Important:**
+
+- Place the four assessment-provided CSV files inside the `data/` folder.
+- The `data/` folder must be located in the same project root as the notebook.
+- Do not modify the original assessment files, especially `data/december-chart-inputs.csv`.
+- The `outputs/` folder does not need to contain any files before running the notebook.
+- `scorer_results/` does not need to exist beforehand; it will be created automatically by `score.py`.
+- Run the commands below from the project root — the folder containing `freight-rate-prediction.ipynb`, `score.py`, and `requirements.txt`.
+
+### 2. Install Dependencies
+
+Open a terminal in the project root and run:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+This installs the Python packages required to run the modeling pipeline.
+
+### 3. Open the Notebook
+
+Open `freight-rate-prediction.ipynb` in VS Code or Jupyter.
+
+Select a Python kernel with the required dependencies installed, then run all cells from beginning to end.
+
+The notebook:
+
+1. Loads the original data from the `data/` folder.
+2. Performs feature engineering and preprocessing.
+3. Trains the final CatBoost models.
+4. Generates the validation predictions.
+5. Generates predictions for the 31 December dates.
+6. Saves the generated prediction files to the `outputs/` folder.
+
+The notebook generates:
+
+```text
+outputs/validation_predictions.csv
+outputs/december_chart_inputs.csv
+```
+
+The original files in the `data/` folder are not modified.
+
+### 4. Validate the Generated Outputs
+
+After the notebook finishes successfully, open a terminal in the project root and run:
+
+```bash
+python score.py --predictions outputs/validation_predictions.csv --december-predictions outputs/december_chart_inputs.csv
+```
+
+The scorer checks that:
+
+- The validation predictions contain exactly 12,000 rows.
+- The validation IDs are valid.
+- The predicted rates are valid and positive.
+- The December predictions contain exactly 31 rows.
+- All December dates from December 1 through December 31, 2025 are present.
+- The fixed December inputs remain unchanged.
+- The `predicted_rate` column is present and valid.
+
+A successful run should report:
+
+```text
+Validated 12,000 final predictions.
+Validated 31 fixed December predictions.
+Created chart: scorer_results\candidate_december.png
+Final validation metrics are calculated by Spotter after submission.
+```
+
+The scorer automatically creates `scorer_results/candidate_december.png`, which contains the December prediction chart.
+
+### 5. Final Project Structure
+
+After running the complete pipeline, the project should look like:
+
+<project-root>/
+│
+├── data/
+│   ├── train-test.csv
+│   ├── validation.csv
+│   ├── december-chart-inputs.csv
+│   └── validation-predictions-template.csv
+│
+├── outputs/
+│   ├── validation_predictions.csv
+│   └── december_chart_inputs.csv
+│
+├── scorer_results/
+│   └── candidate_december.png
+│
+├── freight-rate-prediction.ipynb
+├── score.py
+├── requirements.txt
+└── README.md
+
+### Reproducibility
+
+The pipeline is designed to produce deterministic and reproducible results using fixed model parameters, random seeds, input data, and dependency specifications.
+
+The original input files are preserved, while generated predictions are written to the `outputs/` folder.
+
 ## Dataset
 
 The project uses three primary datasets:
