@@ -328,17 +328,6 @@ freight-rate-prediction/
 
 ---
 
-## Key Result
-
-| Model | October Holdout RMSE |
-|---|---:|
-| Original CatBoost Baseline | $647.10 |
-| 50/50 Tuned CatBoost Blend | **$646.51** |
-
-The final ensemble improved the October holdout RMSE by **$0.59** compared with the original baseline.
-
----
-
 ## Conclusion
 
 This project demonstrates an end-to-end machine learning workflow for freight-rate prediction, from exploratory analysis and feature engineering through model selection, time-based validation, ensemble blending, and final prediction generation.
