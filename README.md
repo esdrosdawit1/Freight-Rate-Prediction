@@ -22,6 +22,7 @@ The repository contains the modeling code and supporting scripts. The assessment
 
 The project should be organized as follows before running the notebook:
 
+```text
 <project-root>/
 │
 ├── data/
@@ -37,6 +38,7 @@ The project should be organized as follows before running the notebook:
 ├── score.py
 ├── requirements.txt
 └── README.md
+```
 
 **Important:**
 
@@ -114,6 +116,7 @@ The scorer automatically creates `scorer_results/candidate_december.png`, which 
 
 After running the complete pipeline, the project should look like:
 
+```text
 <project-root>/
 │
 ├── data/
@@ -133,6 +136,7 @@ After running the complete pipeline, the project should look like:
 ├── score.py
 ├── requirements.txt
 └── README.md
+```
 
 ### Reproducibility
 
